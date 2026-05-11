@@ -1,0 +1,896 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ポートフォリオ損益・実質利回りトラッカー (SHD版)</title>
+<style>
+  :root {
+    --bg: #fafaf7;
+    --surface: #ffffff;
+    --surface-2: #f3f2ec;
+    --text: #1a1a1a;
+    --text-2: #666;
+    --text-3: #999;
+    --border: #e5e3db;
+    --border-2: #d1cfc5;
+    --accent: #3b5bdb;
+    --success: #2f9e44;
+    --danger: #c92a2a;
+    --radius: 8px;
+    --radius-lg: 12px;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Hiragino Sans", "Noto Sans JP", sans-serif;
+    font-size: 14px;
+    line-height: 1.6;
+  }
+  .container { max-width: 1200px; margin: 0 auto; padding: 1.5rem; }
+  h1 { font-size: 22px; font-weight: 500; margin: 0 0 1.5rem; }
+  button {
+    background: var(--surface);
+    border: 1px solid var(--border-2);
+    border-radius: var(--radius);
+    padding: 6px 14px;
+    font-size: 13px;
+    font-family: inherit;
+    color: var(--text);
+    cursor: pointer;
+    transition: background 0.1s;
+  }
+  button:hover { background: var(--surface-2); }
+  button.primary { background: var(--accent); color: white; border-color: var(--accent); }
+  button.primary:hover { opacity: 0.9; }
+  button.mini-btn { padding: 2px 8px; font-size: 11px; }
+  button.danger-text { color: var(--danger); }
+  input, select {
+    background: var(--surface);
+    border: 1px solid var(--border-2);
+    border-radius: var(--radius);
+    padding: 6px 10px;
+    font-size: 13px;
+    font-family: inherit;
+    color: var(--text);
+    height: 32px;
+  }
+  input:focus, select:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
+  label { color: var(--text-2); display: block; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; background: var(--surface); border-radius: var(--radius); overflow: hidden; }
+  th { text-align: left; padding: 10px 8px; font-weight: 500; color: var(--text-2); border-bottom: 1px solid var(--border); background: var(--surface-2); }
+  td { padding: 10px 8px; border-bottom: 1px solid var(--border); }
+  tr:last-child td { border-bottom: none; }
+  .text-right { text-align: right; }
+  .success { color: var(--success); }
+  .danger { color: var(--danger); }
+  .metric-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; margin-bottom: 1.5rem; }
+  .metric-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 14px 16px; }
+  .metric-label { font-size: 12px; color: var(--text-2); margin-bottom: 6px; }
+  .metric-value { font-size: 22px; font-weight: 500; }
+  .tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--border); margin-bottom: 1rem; flex-wrap: wrap; }
+  .tab-btn { background: transparent; border: none; border-bottom: 2px solid transparent; padding: 10px 16px; font-size: 14px; color: var(--text-2); border-radius: 0; }
+  .tab-btn.active { border-bottom-color: var(--text); color: var(--text); font-weight: 500; }
+  .tab-pane { display: none; }
+  .tab-pane.active { display: block; }
+  .modal-bg { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 100; padding: 2rem; align-items: flex-start; justify-content: center; overflow-y: auto; }
+  .modal-bg.active { display: flex; }
+  .modal-card { max-width: 480px; width: 100%; background: var(--surface); border-radius: var(--radius-lg); padding: 1.5rem; margin-top: 2rem; }
+  .modal-title { font-size: 16px; font-weight: 500; margin-bottom: 1rem; }
+  .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .form-grid .full { grid-column: 1 / -1; }
+  .form-grid label { font-size: 12px; }
+  .form-grid input, .form-grid select { width: 100%; margin-top: 4px; }
+  .modal-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 1.25rem; }
+  .toolbar { display: flex; gap: 8px; margin-bottom: 1rem; flex-wrap: wrap; align-items: center; }
+  .muted { color: var(--text-3); font-size: 12px; }
+  .loan-summary { margin-top: 1rem; padding: 1rem; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); }
+  .summary-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; }
+  .summary-grid > div > div:first-child { color: var(--text-2); font-size: 12px; }
+  .summary-grid > div > div:last-child { font-weight: 500; font-size: 15px; margin-top: 4px; }
+  code { background: var(--surface-2); padding: 2px 6px; border-radius: 4px; font-size: 12px; font-family: ui-monospace, Menlo, monospace; }
+  .help { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 1rem; font-size: 12px; color: var(--text-2); line-height: 1.8; }
+  .help strong { color: var(--text); font-weight: 500; }
+  .settings-section { margin-bottom: 1.5rem; }
+  .settings-section h3 { font-size: 14px; font-weight: 500; margin: 0 0 10px; color: var(--text); }
+  .fx-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 12px; }
+  /* インライン編集 */
+  .editable { cursor: pointer; transition: background 0.1s; padding: 4px 6px; border-radius: 4px; }
+  .editable:hover { background: var(--surface-2); }
+  .editable:hover::after { content: " ✎"; color: var(--text-3); font-size: 11px; }
+  .inline-input { width: 90px; height: 26px; padding: 2px 6px; font-size: 13px; text-align: right; }
+  /* 一括更新モーダル */
+  .bulk-card { max-width: 720px; }
+  .bulk-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .bulk-table th { text-align: left; padding: 8px; font-size: 12px; color: var(--text-2); border-bottom: 1px solid var(--border); background: var(--surface-2); position: sticky; top: 0; }
+  .bulk-table td { padding: 6px 8px; border-bottom: 1px solid var(--border); }
+  .bulk-table input { width: 110px; height: 28px; text-align: right; }
+  .bulk-scroll { max-height: 60vh; overflow-y: auto; border: 1px solid var(--border); border-radius: var(--radius); }
+  .change-cell { font-size: 11px; }
+  @media (max-width: 700px) {
+    .metric-value { font-size: 18px; }
+    table { font-size: 12px; }
+    th, td { padding: 8px 6px; }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+<h1>ポートフォリオ損益・実質利回りトラッカー <span style="font-size: 13px; color: var(--text-3); font-weight: 400; margin-left: 8px;">SHD版 (手動入力)</span></h1>
+
+<div class="metric-grid">
+  <div class="metric-card"><div class="metric-label">評価額合計</div><div class="metric-value" id="m-mv">¥0</div></div>
+  <div class="metric-card"><div class="metric-label">取得原価</div><div class="metric-value" id="m-cost">¥0</div></div>
+  <div class="metric-card"><div class="metric-label">評価損益</div><div class="metric-value" id="m-pnl">¥0</div><div id="m-pnl-breakdown" style="font-size: 11px; color: var(--text-3); margin-top: 4px; line-height: 1.5;"></div></div>
+  <div class="metric-card"><div class="metric-label">受取合計(配当・利金)</div><div class="metric-value" id="m-income">¥0</div></div>
+  <div class="metric-card" style="background: linear-gradient(135deg, var(--surface) 0%, var(--surface-2) 100%); border: 1px solid var(--border-2);"><div class="metric-label">総合損益 (評価+受取)</div><div class="metric-value" id="m-total">¥0</div></div>
+  <div class="metric-card"><div class="metric-label">単純利回り</div><div class="metric-value" id="m-simple">—</div></div>
+  <div class="metric-card"><div class="metric-label">年率換算</div><div class="metric-value" id="m-annual">—</div></div>
+  <div class="metric-card"><div class="metric-label">実質利回り(ローン後)</div><div class="metric-value" id="m-net">—</div></div>
+</div>
+
+<div class="tabs">
+  <button class="tab-btn active" data-tab="holdings">保有資産</button>
+  <button class="tab-btn" data-tab="loans">ローン</button>
+  <button class="tab-btn" data-tab="income">配当・利金</button>
+  <button class="tab-btn" data-tab="settings">設定</button>
+</div>
+
+<div id="tab-holdings" class="tab-pane active">
+  <div class="toolbar">
+    <button class="primary" id="btn-add">+ 資産を追加</button>
+    <button id="btn-bulk-update">価格を一括更新</button>
+    <span id="last-updated" class="muted"></span>
+  </div>
+  <div style="overflow-x: auto;">
+    <table id="holdings-table">
+      <thead><tr>
+        <th>名称</th><th>種別</th>
+        <th class="text-right">数量</th><th class="text-right">取得単価</th><th class="text-right">取得価額</th><th class="text-right">現在値 ✎</th>
+        <th>通貨</th><th>取得日</th>
+        <th class="text-right">評価額</th><th class="text-right">累計受取</th><th class="text-right">損益 / 年率</th><th></th>
+      </tr></thead>
+      <tbody id="holdings-body"></tbody>
+    </table>
+  </div>
+</div>
+
+<div id="tab-loans" class="tab-pane">
+  <div class="toolbar"><button class="primary" id="btn-add-loan">+ ローンを追加</button></div>
+  <div style="overflow-x: auto;">
+    <table>
+      <thead><tr>
+        <th>名称</th><th class="text-right">残高</th><th class="text-right">金利(%)</th>
+        <th>通貨</th><th class="text-right">年間利息</th><th></th>
+      </tr></thead>
+      <tbody id="loans-body"></tbody>
+    </table>
+  </div>
+  <div class="loan-summary" id="loan-summary"></div>
+</div>
+
+<div id="tab-income" class="tab-pane">
+  <div class="toolbar">
+    <button class="primary" id="btn-add-income">+ 受取を記録</button>
+    <span class="muted">配当・利金・分配金の受取実績</span>
+  </div>
+  <div style="overflow-x: auto;">
+    <table>
+      <thead><tr>
+        <th>日付</th><th>資産</th><th>種類</th>
+        <th class="text-right">金額</th><th>通貨</th><th></th>
+      </tr></thead>
+      <tbody id="income-body"></tbody>
+    </table>
+  </div>
+</div>
+
+<div id="tab-settings" class="tab-pane">
+  <div class="settings-section">
+    <h3>為替レート (基準: JPY)</h3>
+    <div class="fx-grid">
+      <label>USD/JPY<input type="number" id="fx-usd" step="0.01"></label>
+      <label>EUR/JPY<input type="number" id="fx-eur" step="0.01"></label>
+      <label>AUD/JPY<input type="number" id="fx-aud" step="0.01"></label>
+      <label>GBP/JPY<input type="number" id="fx-gbp" step="0.01"></label>
+    </div>
+    <button id="btn-fx-refresh" style="margin-top: 10px; display: none;">為替を自動取得</button>
+  </div>
+
+  <div class="settings-section">
+    <h3>データ管理</h3>
+    <div class="toolbar">
+      <button id="btn-export">エクスポート (JSON)</button>
+      <button id="btn-import">インポート</button>
+      <button id="btn-sample">サンプルデータ投入</button>
+      <button class="danger-text" id="btn-clear">全データ削除</button>
+    </div>
+    <input type="file" id="file-import" accept=".json" style="display:none;">
+    <div class="muted" style="margin-top: 8px;">データはブラウザのlocalStorageに保存されます。定期的にJSONエクスポートでバックアップを取ることをお勧めします。</div>
+  </div>
+
+  <div class="settings-section">
+    <h3>使い方 (SHD版)</h3>
+    <div class="help">
+      <strong>SHD版は手動入力に特化したバージョンです。</strong> 価格自動取得は搭載していません。<br><br>
+      <strong>現在値の更新方法 (2通り):</strong><br>
+      ① 明細表の「現在値」セルを直接クリック → その場で数値を編集 → Enterキーで確定 (Tabキーで次の銘柄へ)<br>
+      ② ツールバーの「価格を一括更新」ボタン → 全銘柄をスプレッドシート風に一覧表示し、まとめて入力<br><br>
+      <strong>為替レート:</strong> 設定タブで手動入力してください。証券会社の画面やGoogle検索 (例: "USDJPY") で確認できます。<br>
+      <strong>更新タイミング:</strong> 評価額を見たいタイミング (月次・四半期など) でまとめて更新するのがおすすめです。
+    </div>
+  </div>
+</div>
+
+</div>
+
+<div class="modal-bg" id="modal-bg">
+  <div class="modal-card" id="modal-card"></div>
+</div>
+
+<script>
+(function(){
+  const SKEY = { h: 'ptf:holdings', l: 'ptf:loans', i: 'ptf:income', s: 'ptf:settings' };
+  let state = {
+    holdings: [], loans: [], income: [],
+    settings: { fx: { USD: 150, EUR: 162, AUD: 98, GBP: 190 } }
+  };
+
+  function load() {
+    try {
+      const h = localStorage.getItem(SKEY.h); if (h) state.holdings = JSON.parse(h);
+      const l = localStorage.getItem(SKEY.l); if (l) state.loans = JSON.parse(l);
+      const i = localStorage.getItem(SKEY.i); if (i) state.income = JSON.parse(i);
+      const s = localStorage.getItem(SKEY.s); if (s) state.settings = JSON.parse(s);
+    } catch(e) { console.error(e); }
+    document.getElementById('fx-usd').value = state.settings.fx.USD;
+    document.getElementById('fx-eur').value = state.settings.fx.EUR;
+    document.getElementById('fx-aud').value = state.settings.fx.AUD;
+    document.getElementById('fx-gbp').value = state.settings.fx.GBP;
+  }
+  function save(which) {
+    try {
+      if (!which || which==='h') localStorage.setItem(SKEY.h, JSON.stringify(state.holdings));
+      if (!which || which==='l') localStorage.setItem(SKEY.l, JSON.stringify(state.loans));
+      if (!which || which==='i') localStorage.setItem(SKEY.i, JSON.stringify(state.income));
+      if (!which || which==='s') localStorage.setItem(SKEY.s, JSON.stringify(state.settings));
+    } catch(e) { console.error(e); }
+  }
+
+  const fmtY = n => (n<0?'-':'') + '¥' + Math.round(Math.abs(n)).toLocaleString();
+  const fmtPct = n => (n>=0?'+':'') + n.toFixed(2) + '%';
+  const todayStr = () => new Date().toISOString().slice(0,10);
+  const uid = () => Math.random().toString(36).slice(2,10);
+  const fx = ccy => ccy==='JPY' ? 1 : (state.settings.fx[ccy] || 1);
+  const daysBetween = (a,b) => Math.max(1, (new Date(b) - new Date(a))/(1000*60*60*24));
+  const esc = s => String(s==null?'':s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]);
+
+  // 取得時レート: 銘柄に保存されていれば使う、なければ現在レートでフォールバック
+  const fxBuy = h => {
+    const ccy = h.currency || 'JPY';
+    if (ccy === 'JPY') return 1;
+    if (h.buyFx && h.buyFx > 0) return h.buyFx;
+    return fx(ccy);
+  };
+
+  function compute() {
+    let mv = 0, cost = 0, costAtCurrent = 0;
+    for (const h of state.holdings) {
+      const ccy = h.currency || 'JPY';
+      const rNow = fx(ccy);
+      const rBuy = fxBuy(h);
+      mv          += (h.price || 0) * (h.qty || 0) * rNow;
+      cost        += (h.buyPrice || 0) * (h.qty || 0) * rBuy;       // 取得時レートで原価
+      costAtCurrent += (h.buyPrice || 0) * (h.qty || 0) * rNow;     // 為替損益分離用
+    }
+    const pnl = mv - cost;                                          // トータル損益(価格+為替)
+    const fxPnl = costAtCurrent - cost;                             // 為替損益のみ
+    const pricePnl = mv - costAtCurrent;                            // 価格損益のみ
+    const income = state.income.reduce((s,e)=> s + (e.amount||0)*fx(e.currency||'JPY'), 0);
+    const totalReturn = pnl + income;
+
+    let wDays = 0, wCost = 0;
+    for (const h of state.holdings) {
+      const c = (h.buyPrice||0)*(h.qty||0)*fxBuy(h);
+      if (h.buyDate && c>0) {
+        wDays += daysBetween(h.buyDate, todayStr()) * c;
+        wCost += c;
+      }
+    }
+    const avgDays = wCost>0 ? wDays/wCost : 0;
+    const yrs = avgDays/365.25;
+
+    const simple = cost>0 ? (totalReturn/cost)*100 : null;
+    const annual = (cost>0 && yrs>0.01) ? (Math.pow((mv+income)/cost, 1/yrs) - 1) * 100 : null;
+
+    const loanBal = state.loans.reduce((s,l)=> s + (l.balance||0)*fx(l.currency||'JPY'), 0);
+    const annualInterest = state.loans.reduce((s,l)=> s + (l.balance||0)*(l.rate||0)/100*fx(l.currency||'JPY'), 0);
+    const interestToDate = annualInterest * yrs;
+    const equity = cost - loanBal;
+    const netReturn = totalReturn - interestToDate;
+    const netSimple = equity>0 ? (netReturn/equity)*100 : null;
+
+    return { mv, cost, pnl, fxPnl, pricePnl, income, totalReturn, simple, annual, avgDays, yrs,
+             loanBal, annualInterest, interestToDate, equity, netReturn, netSimple };
+  }
+
+  function colorClass(n) { return n>=0 ? 'success' : 'danger'; }
+
+  function render() {
+    const c = compute();
+    document.getElementById('m-mv').textContent = fmtY(c.mv);
+    document.getElementById('m-cost').textContent = fmtY(c.cost);
+    const pnlEl = document.getElementById('m-pnl');
+    pnlEl.textContent = fmtY(c.pnl);
+    pnlEl.className = 'metric-value ' + colorClass(c.pnl);
+    const bdEl = document.getElementById('m-pnl-breakdown');
+    if (Math.abs(c.fxPnl) >= 1) {
+      const priceCol = c.pricePnl >= 0 ? 'var(--success)' : 'var(--danger)';
+      const fxCol = c.fxPnl >= 0 ? 'var(--success)' : 'var(--danger)';
+      bdEl.innerHTML = `価格 <span style="color:${priceCol};">${fmtY(c.pricePnl)}</span> / 為替 <span style="color:${fxCol};">${fmtY(c.fxPnl)}</span>`;
+    } else {
+      bdEl.innerHTML = '';
+    }
+    const incEl = document.getElementById('m-income');
+    incEl.textContent = fmtY(c.income);
+    incEl.className = 'metric-value' + (c.income>0 ? ' success' : '');
+    // 総合損益カード(評価損益+受取)
+    const totalEl = document.getElementById('m-total');
+    totalEl.textContent = fmtY(c.totalReturn);
+    totalEl.className = 'metric-value ' + colorClass(c.totalReturn);
+    const simpleEl = document.getElementById('m-simple');
+    simpleEl.textContent = c.simple==null ? '—' : fmtPct(c.simple);
+    simpleEl.className = 'metric-value ' + (c.simple==null?'':colorClass(c.simple));
+    const annualEl = document.getElementById('m-annual');
+    annualEl.textContent = c.annual==null ? '—' : fmtPct(c.annual);
+    annualEl.className = 'metric-value ' + (c.annual==null?'':colorClass(c.annual));
+    const netEl = document.getElementById('m-net');
+    netEl.textContent = c.netSimple==null ? '—' : fmtPct(c.netSimple);
+    netEl.className = 'metric-value ' + (c.netSimple==null?'':colorClass(c.netSimple));
+
+    const tb = document.getElementById('holdings-body');
+    tb.innerHTML = '';
+    if (state.holdings.length===0) {
+      tb.innerHTML = '<tr><td colspan="12" style="padding: 1.5rem; text-align:center; color: var(--text-3);">資産を追加してください</td></tr>';
+    }
+    for (const h of state.holdings) {
+      const ccy = h.currency||'JPY';
+      const rNow = fx(ccy);
+      const rBuy = fxBuy(h);
+      const mv = (h.price||0)*(h.qty||0)*rNow;
+      const cst = (h.buyPrice||0)*(h.qty||0)*rBuy;        // 取得時レートで原価
+      const cstLocal = (h.buyPrice||0)*(h.qty||0);
+      const pn = mv - cst;
+      const pctChg = cst>0 ? (pn/cst*100) : 0;
+      // 取得時レート表示(外貨建てのみ)
+      const fxBadge = (ccy !== 'JPY') ? `<br><span style="font-size:10px; color: var(--text-3);">取得時 ${rBuy.toFixed(2)}</span>` : '';
+
+      // 銘柄別の受取累計 (income.assetが銘柄名と一致するものを集計、JPY換算)
+      const myIncome = state.income
+        .filter(e => e.asset === h.name)
+        .reduce((s, e) => s + (e.amount||0) * fx(e.currency||'JPY'), 0);
+      const incomePn = pn + myIncome;          // 受取込み損益
+      const incomePctChg = cst>0 ? (incomePn/cst*100) : 0;
+
+      // 明細ごとのCAGR (価格ベース と インカム込み)
+      let cagrTxt = '';
+      if (h.buyDate && cst>0) {
+        const yrsH = daysBetween(h.buyDate, todayStr())/365.25;
+        if (yrsH > 0.02 && mv > 0) {
+          const cagrPrice = (Math.pow(mv/cst, 1/yrsH) - 1) * 100;
+          cagrTxt = `<span style="font-size:11px; color: var(--text-2);">年率 ${fmtPct(cagrPrice)}</span>`;
+          if (myIncome > 0) {
+            const cagrTotal = (Math.pow((mv+myIncome)/cst, 1/yrsH) - 1) * 100;
+            cagrTxt += `<br><span style="font-size:11px; color: var(--text-2);">受取込 ${fmtPct(cagrTotal)}</span>`;
+          }
+        } else {
+          cagrTxt = `<span style="font-size:11px; color: var(--text-3);">期間短</span>`;
+        }
+      }
+
+      // 累計受取セル(配当利回り換算も併記)
+      let incomeCell = '—';
+      if (myIncome > 0) {
+        const incomeYieldOnCost = cst > 0 ? (myIncome/cst*100) : 0;
+        incomeCell = `${fmtY(myIncome)}<br><span style="font-size:11px; color: var(--text-2);">対原価 ${fmtPct(incomeYieldOnCost)}</span>`;
+      }
+
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td>${esc(h.name)}</td>
+        <td style="color: var(--text-2);">${esc(h.type)}</td>
+        <td class="text-right">${(h.qty||0).toLocaleString()}</td>
+        <td class="text-right">${(h.buyPrice||0).toLocaleString()}</td>
+        <td class="text-right">${cstLocal.toLocaleString(undefined,{maximumFractionDigits:0})}${fxBadge}</td>
+        <td class="text-right"><span class="editable" data-field="price" data-id="${h.id}">${(h.price||0).toLocaleString()}</span></td>
+        <td>${esc(ccy)}</td>
+        <td style="color: var(--text-2);">${esc(h.buyDate)}</td>
+        <td class="text-right">${fmtY(mv)}</td>
+        <td class="text-right ${myIncome>0?'success':''}">${incomeCell}</td>
+        <td class="text-right ${colorClass(pn)}">${fmtY(pn)}<br><span style="font-size:11px;">${fmtPct(pctChg)}</span>${cagrTxt?'<br>'+cagrTxt:''}</td>
+        <td style="white-space: nowrap;">
+          <button class="mini-btn" data-act="edit" data-id="${h.id}">編集</button>
+          <button class="mini-btn" data-act="del" data-id="${h.id}">削除</button>
+        </td>`;
+      tb.appendChild(tr);
+    }
+
+    const lb = document.getElementById('loans-body');
+    lb.innerHTML = '';
+    if (state.loans.length===0) {
+      lb.innerHTML = '<tr><td colspan="6" style="padding: 1.5rem; text-align:center; color: var(--text-3);">ローンがあれば追加してください</td></tr>';
+    }
+    for (const l of state.loans) {
+      const r = fx(l.currency||'JPY');
+      const bal = (l.balance||0)*r;
+      const int = bal*(l.rate||0)/100;
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td>${esc(l.name)}</td>
+        <td class="text-right">${(l.balance||0).toLocaleString()}</td>
+        <td class="text-right">${(l.rate||0).toFixed(3)}</td>
+        <td>${esc(l.currency||'JPY')}</td>
+        <td class="text-right">${fmtY(int)}</td>
+        <td>
+          <button class="mini-btn" data-act="edit-l" data-id="${l.id}">編集</button>
+          <button class="mini-btn" data-act="del-l" data-id="${l.id}">削除</button>
+        </td>`;
+      lb.appendChild(tr);
+    }
+
+    document.getElementById('loan-summary').innerHTML = `
+      <div class="summary-grid">
+        <div><div>ローン残高合計</div><div>${fmtY(c.loanBal)}</div></div>
+        <div><div>年間利息</div><div>${fmtY(c.annualInterest)}</div></div>
+        <div><div>自己資金 (原価 - 残高)</div><div>${fmtY(c.equity)}</div></div>
+        <div><div>保有期間 (加重平均)</div><div>${c.avgDays.toFixed(0)}日 (${c.yrs.toFixed(2)}年)</div></div>
+      </div>`;
+
+    const ib = document.getElementById('income-body');
+    ib.innerHTML = '';
+    if (state.income.length===0) {
+      ib.innerHTML = '<tr><td colspan="6" style="padding: 1.5rem; text-align:center; color: var(--text-3);">配当・利金の受取履歴を追加すると利回りが精緻化されます</td></tr>';
+    }
+    const sorted = [...state.income].sort((a,b)=> (b.date||'').localeCompare(a.date||''));
+    for (const e of sorted) {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td>${esc(e.date)}</td>
+        <td>${esc(e.asset)}</td>
+        <td style="color: var(--text-2);">${esc(e.kind)}</td>
+        <td class="text-right">${(e.amount||0).toLocaleString()}</td>
+        <td>${esc(e.currency||'JPY')}</td>
+        <td><button class="mini-btn" data-act="del-i" data-id="${e.id}">削除</button></td>`;
+      ib.appendChild(tr);
+    }
+  }
+
+  document.querySelectorAll('.tab-btn').forEach(b => {
+    b.addEventListener('click', () => {
+      document.querySelectorAll('.tab-btn').forEach(x => x.classList.remove('active'));
+      b.classList.add('active');
+      document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+      document.getElementById('tab-' + b.dataset.tab).classList.add('active');
+    });
+  });
+
+  function openModal(html, onSubmit) {
+    const bg = document.getElementById('modal-bg');
+    const card = document.getElementById('modal-card');
+    // 前回のモーダル状態をリセット
+    card.classList.remove('bulk-card');
+    card.innerHTML = html;
+    bg.classList.add('active');
+    const close = () => {
+      bg.classList.remove('active');
+      card.classList.remove('bulk-card');
+      card.innerHTML = '';
+    };
+    card.querySelectorAll('[data-close]').forEach(x => x.addEventListener('click', close));
+    bg.onclick = (e) => { if (e.target===bg) close(); };
+    const form = card.querySelector('form');
+    if (form) {
+      form.addEventListener('submit', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        onSubmit(form, close);
+      });
+    }
+  }
+
+  function holdingForm(h={}) {
+    return `
+      <div class="modal-title">${h.id?'資産を編集':'資産を追加'}</div>
+      <form>
+        <div class="form-grid">
+          <label class="full">名称<input name="name" required value="${esc(h.name)}"></label>
+          <label>種別
+            <select name="type">
+              ${['株式','ETF','外債','投信','オルタナ','現金','その他'].map(t=>`<option ${h.type===t?'selected':''}>${t}</option>`).join('')}
+            </select>
+          </label>
+          <label>通貨
+            <select name="currency" id="form-currency">
+              ${['JPY','USD','EUR','AUD','GBP'].map(t=>`<option ${((h.currency||'JPY')===t)?'selected':''}>${t}</option>`).join('')}
+            </select>
+          </label>
+          <label>数量<input name="qty" type="number" step="any" required value="${h.qty??''}"></label>
+          <label>取得単価<input name="buyPrice" type="number" step="any" required value="${h.buyPrice??''}"></label>
+          <label>現在値<input name="price" type="number" step="any" value="${h.price??''}"></label>
+          <label>取得日<input name="buyDate" type="date" value="${h.buyDate||''}"></label>
+        </div>
+        <div id="form-buyfx-wrap" style="${(h.currency||'JPY')==='JPY'?'display:none;':''} margin-top: 12px; padding: 10px; background: var(--surface-2); border-radius: var(--radius);">
+          <div style="font-size: 12px; color: var(--text-2); margin-bottom: 4px;">
+            取得時の為替レート (1 <span id="form-ccy-label">${h.currency||'USD'}</span> あたり JPY)
+          </div>
+          <input name="buyFx" type="number" step="any" value="${h.buyFx??''}" placeholder="例: 150.25" style="width: 200px;">
+          <div style="font-size: 11px; color: var(--text-3); margin-top: 4px;">空欄なら現在レートを使用します</div>
+        </div>
+        <div class="modal-actions">
+          <button type="button" data-close>キャンセル</button>
+          <button type="submit" class="primary">保存</button>
+        </div>
+      </form>`;
+  }
+
+  // 資産フォーム特有の動作: 通貨選択で取得時レート欄の表示切替
+  function bindHoldingFormBehavior() {
+    const sel = document.getElementById('form-currency');
+    const wrap = document.getElementById('form-buyfx-wrap');
+    const lbl = document.getElementById('form-ccy-label');
+    if (sel && wrap) {
+      sel.addEventListener('change', () => {
+        if (sel.value === 'JPY') wrap.style.display = 'none';
+        else { wrap.style.display = ''; if (lbl) lbl.textContent = sel.value; }
+      });
+    }
+  }
+  function loanForm(l={}) {
+    return `
+      <div class="modal-title">${l.id?'ローンを編集':'ローンを追加'}</div>
+      <form>
+        <div class="form-grid">
+          <label class="full">名称<input name="name" required value="${esc(l.name)}"></label>
+          <label>残高<input name="balance" type="number" step="any" required value="${l.balance??''}"></label>
+          <label>金利 (%)<input name="rate" type="number" step="any" required value="${l.rate??''}"></label>
+          <label>通貨
+            <select name="currency">
+              ${['JPY','USD','EUR','AUD','GBP'].map(t=>`<option ${((l.currency||'JPY')===t)?'selected':''}>${t}</option>`).join('')}
+            </select>
+          </label>
+        </div>
+        <div class="modal-actions">
+          <button type="button" data-close>キャンセル</button>
+          <button type="submit" class="primary">保存</button>
+        </div>
+      </form>`;
+  }
+  function incomeForm(e={}) {
+    return `
+      <div class="modal-title">配当・利金を記録</div>
+      <form>
+        <div class="form-grid">
+          <label>日付<input name="date" type="date" required value="${e.date||todayStr()}"></label>
+          <label>種類
+            <select name="kind">
+              ${['配当','利金','分配金','その他'].map(t=>`<option ${e.kind===t?'selected':''}>${t}</option>`).join('')}
+            </select>
+          </label>
+          <label class="full">資産名
+            <select name="asset">
+              ${state.holdings.map(h=>`<option ${e.asset===h.name?'selected':''}>${esc(h.name)}</option>`).join('')}
+              <option value="その他">その他</option>
+            </select>
+          </label>
+          <label>金額<input name="amount" type="number" step="any" required value="${e.amount??''}"></label>
+          <label>通貨
+            <select name="currency">
+              ${['JPY','USD','EUR','AUD','GBP'].map(t=>`<option ${((e.currency||'JPY')===t)?'selected':''}>${t}</option>`).join('')}
+            </select>
+          </label>
+        </div>
+        <div class="modal-actions">
+          <button type="button" data-close>キャンセル</button>
+          <button type="submit" class="primary">保存</button>
+        </div>
+      </form>`;
+  }
+
+  document.getElementById('btn-add').onclick = () => {
+    openModal(holdingForm(), (f, close) => {
+      try {
+        const data = Object.fromEntries(new FormData(f));
+        ['qty','buyPrice','price'].forEach(k => data[k] = parseFloat(data[k])||0);
+        const bf = parseFloat(data.buyFx);
+        if (!isNaN(bf) && bf > 0) data.buyFx = bf; else delete data.buyFx;
+        data.id = uid();
+        state.holdings.push(data);
+        save('h');
+        render();
+        close();
+      } catch(err) {
+        console.error('[btn-add] ERROR:', err);
+        alert('保存中にエラーが発生しました: ' + err.message);
+      }
+    });
+    bindHoldingFormBehavior();
+  };
+  document.getElementById('btn-add-loan').onclick = () => {
+    openModal(loanForm(), (f, close) => {
+      const data = Object.fromEntries(new FormData(f));
+      ['balance','rate'].forEach(k => data[k] = parseFloat(data[k])||0);
+      data.id = uid();
+      state.loans.push(data);
+      save('l'); render(); close();
+    });
+  };
+  document.getElementById('btn-add-income').onclick = () => {
+    openModal(incomeForm(), (f, close) => {
+      const data = Object.fromEntries(new FormData(f));
+      data.amount = parseFloat(data.amount)||0;
+      data.id = uid();
+      state.income.push(data);
+      save('i'); render(); close();
+    });
+  };
+
+  document.addEventListener('click', (ev) => {
+    const btn = ev.target.closest('button.mini-btn');
+    if (!btn) return;
+    const act = btn.dataset.act, id = btn.dataset.id;
+    if (act==='del') { state.holdings = state.holdings.filter(x=>x.id!==id); save('h'); render(); }
+    if (act==='del-l') { state.loans = state.loans.filter(x=>x.id!==id); save('l'); render(); }
+    if (act==='del-i') { state.income = state.income.filter(x=>x.id!==id); save('i'); render(); }
+    if (act==='edit') {
+      const h = state.holdings.find(x=>x.id===id);
+      if (h) {
+        openModal(holdingForm(h), (f, close) => {
+          const data = Object.fromEntries(new FormData(f));
+          ['qty','buyPrice','price'].forEach(k => data[k] = parseFloat(data[k])||0);
+          const bf = parseFloat(data.buyFx);
+          if (!isNaN(bf) && bf > 0) data.buyFx = bf; else delete data.buyFx;
+          // JPY建てなら取得時レート不要
+          if ((data.currency||'JPY') === 'JPY') delete data.buyFx;
+          // 既存のbuyFxを上書き(削除されたケース含む)
+          delete h.buyFx;
+          Object.assign(h, data);
+          save('h'); render(); close();
+        });
+        bindHoldingFormBehavior();
+      }
+    }
+    if (act==='edit-l') {
+      const l = state.loans.find(x=>x.id===id);
+      if (l) openModal(loanForm(l), (f, close) => {
+        const data = Object.fromEntries(new FormData(f));
+        ['balance','rate'].forEach(k => data[k] = parseFloat(data[k])||0);
+        Object.assign(l, data);
+        save('l'); render(); close();
+      });
+    }
+  });
+
+  ['usd','eur','aud','gbp'].forEach(k => {
+    document.getElementById('fx-'+k).onchange = (e) => {
+      state.settings.fx[k.toUpperCase()] = parseFloat(e.target.value)||0;
+      save('s'); render();
+    };
+  });
+
+  // === SHD版: 手動入力ロジック ===
+
+  // 最終更新日時の表示
+  function renderLastUpdated() {
+    const t = state.settings.lastPriceUpdate;
+    const el = document.getElementById('last-updated');
+    if (!el) return;
+    if (t) {
+      const d = new Date(t);
+      el.textContent = `最終更新: ${d.toLocaleString('ja-JP')}`;
+    } else {
+      el.textContent = '価格未更新';
+    }
+  }
+
+  function markUpdated() {
+    state.settings.lastPriceUpdate = new Date().toISOString();
+    save('s');
+    renderLastUpdated();
+  }
+
+  // インライン編集: 現在値セルをクリックでinputに変える
+  document.addEventListener('click', (ev) => {
+    const span = ev.target.closest('.editable');
+    if (!span) return;
+    if (span.querySelector('input')) return; // 既に編集中
+    const id = span.dataset.id;
+    const field = span.dataset.field;
+    const h = state.holdings.find(x => x.id === id);
+    if (!h) return;
+    const cur = h[field] || 0;
+    const input = document.createElement('input');
+    input.type = 'number';
+    input.step = 'any';
+    input.value = cur;
+    input.className = 'inline-input';
+    span.textContent = '';
+    span.appendChild(input);
+    input.focus();
+    input.select();
+
+    const commit = (advance) => {
+      const v = parseFloat(input.value);
+      if (!isNaN(v)) {
+        h[field] = v;
+        save('h');
+        markUpdated();
+      }
+      render();
+      // Tabで次の編集セルへ
+      if (advance) {
+        setTimeout(() => {
+          const all = Array.from(document.querySelectorAll('.editable'));
+          const idx = all.findIndex(e => e.dataset.id === id);
+          const next = all[idx + 1];
+          if (next) next.click();
+        }, 0);
+      }
+    };
+
+    let committed = false;
+    input.addEventListener('blur', () => { if (!committed) { committed = true; commit(false); } });
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') { e.preventDefault(); committed = true; commit(false); }
+      else if (e.key === 'Tab') { e.preventDefault(); committed = true; commit(true); }
+      else if (e.key === 'Escape') { e.preventDefault(); committed = true; render(); }
+    });
+  });
+
+  // 一括更新モーダル
+  document.getElementById('btn-bulk-update').onclick = () => {
+    if (state.holdings.length === 0) {
+      alert('保有資産を先に追加してください。');
+      return;
+    }
+    const rows = state.holdings.map(h => {
+      const r = fx(h.currency || 'JPY');
+      const mv = (h.price || 0) * (h.qty || 0) * r;
+      return `
+        <tr data-id="${h.id}">
+          <td>${esc(h.name)}</td>
+          <td style="color: var(--text-2); font-size: 11px;">${esc(h.type)} / ${esc(h.currency||'JPY')}</td>
+          <td class="text-right" style="color: var(--text-2);">${(h.buyPrice||0).toLocaleString()}</td>
+          <td class="text-right" style="color: var(--text-2);">${(h.price||0).toLocaleString()}</td>
+          <td class="text-right">
+            <input type="number" step="any" data-id="${h.id}" data-old="${h.price||0}" placeholder="${(h.price||0).toLocaleString()}">
+          </td>
+          <td class="text-right change-cell" data-change-id="${h.id}">—</td>
+        </tr>`;
+    }).join('');
+
+    const html = `
+      <div class="modal-title">価格を一括更新</div>
+      <div class="muted" style="margin-bottom: 12px;">
+        現在値の入力欄に新しい価格を入れて「保存」を押してください。空欄の銘柄は変更されません。<br>
+        Tabキーで次の銘柄に移動できます。
+      </div>
+      <div class="bulk-scroll">
+        <table class="bulk-table">
+          <thead><tr>
+            <th>名称</th><th>種別/通貨</th>
+            <th class="text-right">取得単価</th>
+            <th class="text-right">現在値</th>
+            <th class="text-right">新価格</th>
+            <th class="text-right">変動</th>
+          </tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>
+      <div class="modal-actions">
+        <button type="button" data-close>キャンセル</button>
+        <button type="button" class="primary" id="bulk-save">全て保存</button>
+      </div>`;
+
+    const bg = document.getElementById('modal-bg');
+    const card = document.getElementById('modal-card');
+    card.classList.add('bulk-card');
+    card.innerHTML = html;
+    bg.classList.add('active');
+    const close = () => { bg.classList.remove('active'); card.classList.remove('bulk-card'); };
+    card.querySelectorAll('[data-close]').forEach(x => x.addEventListener('click', close));
+    bg.onclick = (e) => { if (e.target === bg) close(); };
+
+    // 入力時に変動率をリアルタイム表示
+    card.querySelectorAll('input[data-id]').forEach(inp => {
+      inp.addEventListener('input', () => {
+        const id = inp.dataset.id;
+        const oldP = parseFloat(inp.dataset.old) || 0;
+        const newP = parseFloat(inp.value);
+        const cell = card.querySelector(`[data-change-id="${id}"]`);
+        if (!cell) return;
+        if (isNaN(newP) || inp.value === '') {
+          cell.textContent = '—';
+          cell.className = 'text-right change-cell';
+        } else if (oldP > 0) {
+          const pct = (newP - oldP) / oldP * 100;
+          cell.textContent = (pct >= 0 ? '+' : '') + pct.toFixed(2) + '%';
+          cell.className = 'text-right change-cell ' + (pct >= 0 ? 'success' : 'danger');
+        } else {
+          cell.textContent = 'NEW';
+          cell.className = 'text-right change-cell';
+        }
+      });
+    });
+
+    // 最初の入力欄にフォーカス
+    const firstInput = card.querySelector('input[data-id]');
+    if (firstInput) firstInput.focus();
+
+    document.getElementById('bulk-save').onclick = () => {
+      let updated = 0;
+      card.querySelectorAll('input[data-id]').forEach(inp => {
+        const v = parseFloat(inp.value);
+        if (!isNaN(v) && inp.value !== '') {
+          const h = state.holdings.find(x => x.id === inp.dataset.id);
+          if (h) { h.price = v; updated++; }
+        }
+      });
+      if (updated > 0) {
+        save('h');
+        markUpdated();
+      }
+      render();
+      close();
+    };
+  };
+
+  document.getElementById('btn-export').onclick = () => {
+    const blob = new Blob([JSON.stringify(state, null, 2)], {type:'application/json'});
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `portfolio-${todayStr()}.json`;
+    a.click();
+  };
+  document.getElementById('btn-import').onclick = () => document.getElementById('file-import').click();
+  document.getElementById('file-import').onchange = async (e) => {
+    const f = e.target.files[0]; if (!f) return;
+    const txt = await f.text();
+    try {
+      const v = JSON.parse(txt);
+      if (v.holdings) state.holdings = v.holdings;
+      if (v.loans) state.loans = v.loans;
+      if (v.income) state.income = v.income;
+      if (v.settings) state.settings = v.settings;
+      save(); load(); render();
+    } catch(err) { alert('読み込みに失敗しました: ' + err.message); }
+  };
+  document.getElementById('btn-clear').onclick = () => {
+    if (!confirm('全データを削除します。よろしいですか？')) return;
+    state = { holdings:[], loans:[], income:[], settings:{ fx:{USD:150,EUR:162,AUD:98,GBP:190} } };
+    save(); load(); render();
+  };
+  document.getElementById('btn-sample').onclick = () => {
+    state.holdings = [
+      { id:uid(), name:'トヨタ自動車', type:'株式', ticker:'7203.jp', qty:200, buyPrice:2400, price:2850, currency:'JPY', buyDate:'2024-04-10' },
+      { id:uid(), name:'Apple', type:'株式', ticker:'aapl.us', qty:50, buyPrice:180, price:210, currency:'USD', buyDate:'2024-06-01' },
+      { id:uid(), name:'米国債ETF(TLT)', type:'ETF', ticker:'tlt.us', qty:100, buyPrice:95, price:92, currency:'USD', buyDate:'2024-09-15' },
+      { id:uid(), name:'豪ドル建社債', type:'外債', ticker:'', qty:10000, buyPrice:100, price:101.2, currency:'AUD', buyDate:'2023-11-20' },
+      { id:uid(), name:'プライベートエクイティ', type:'オルタナ', ticker:'', qty:1, buyPrice:5000000, price:6200000, currency:'JPY', buyDate:'2022-03-01' },
+    ];
+    state.loans = [ { id:uid(), name:'証券担保ローン', balance:5000000, rate:1.5, currency:'JPY' } ];
+    state.income = [
+      { id:uid(), date:'2024-12-10', asset:'トヨタ自動車', kind:'配当', amount:15000, currency:'JPY' },
+      { id:uid(), date:'2025-02-15', asset:'Apple', kind:'配当', amount:12, currency:'USD' },
+    ];
+    save(); render();
+  };
+
+  load();
+  render();
+  renderLastUpdated();
+})();
+</script>
+</body>
+</html>
